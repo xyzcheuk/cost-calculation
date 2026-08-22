@@ -1,0 +1,9 @@
+# Old Google Apps Script source (not needed for GitHub Pages)
+old/
+
+# Google Apps Script server code
+code.gs
+
+# OS / editor junk
+.DS_Store
+Thumbs.db

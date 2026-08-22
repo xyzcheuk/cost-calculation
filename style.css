@@ -1,0 +1,42 @@
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: #f8f9fa;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.container {
+  max-width: 560px;
+  padding: 16px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-size: 0.95rem;
+}
+
+.form-control {
+  font-size: 16px;
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.btn {
+  font-size: 17px;
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+
+@media (max-width: 576px) {
+  .btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+}
