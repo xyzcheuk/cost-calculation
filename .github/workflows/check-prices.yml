@@ -1,0 +1,81 @@
+name: Check DSD drawing prices
+
+on:
+  schedule:
+    # 01:00 UTC == 09:00 Hong Kong time
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check-dsd-prices
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install lxml requests
+
+      - name: Run price checker
+        run: python scripts/check_prices.py
+
+      - name: Detect changed files
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain -- script.js index.html)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff -- script.js index.html > fee-changes.diff
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push fee updates
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add script.js index.html
+          git commit -m "chore: update DSD drawing fees"
+          git push
+
+      - name: Notify fee change (ntfy)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          curl -sS --fail \
+            -H "Title: DSD drawing fees changed" \
+            -H "Priority: high" \
+            -H "Tags: money_with_wings" \
+            --data-binary @fee-changes.diff \
+            "https://ntfy.sh/${{ secrets.NTFY_TOPIC }}"
+
+      - name: Keep-alive commit
+        if: success()
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/last-check.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/last-check.txt
+          git diff --cached --quiet || git commit -m "chore: keep-alive $(date -u +%F)"
+          git push
+
+      - name: Notify failure (ntfy)
+        if: failure()
+        run: |
+          curl -sS --fail \
+            -H "Title: DSD price checker FAILED" \
+            -H "Priority: high" \
+            -H "Tags: rotating_light" \
+            -d "check_prices.py failed on ${{ github.repository }} (trigger: ${{ github.event_name }}). Fix soon: after ~60 days of failures GitHub disables the schedule." \
+            "https://ntfy.sh/${{ secrets.NTFY_TOPIC }}"
